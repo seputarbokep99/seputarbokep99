@@ -202,6 +202,18 @@
       repeating-linear-gradient(115deg, rgba(255,255,255,0.08) 0 2px, transparent 2px 26px);
   }
 
+  .poster.has-cover::before{
+    display:none;
+  }
+
+  .poster img{
+    position:relative;
+    width:100%;
+    height:100%;
+    object-fit: cover;
+    display:block;
+  }
+
   .poster .initials{
     position: relative;
     color: #fff;
@@ -353,9 +365,12 @@
          "title": "Judul Video",
          "cast": ["Pemeran A", "Pemeran B"],
          "tags": ["Drama", "16+"],
+         "cover": "https://link-menuju-gambar-cover.jpg",
          "url": "https://link-menuju-video.com"
        }
      ]
+     Field "cover" opsional. Kalau tidak diisi/tidak bisa dimuat,
+     akan otomatis fallback ke inisial judul seperti biasa.
   ========================================================= */
 
   const PER_PAGE = 10;
@@ -372,6 +387,10 @@
       .slice(0,2)
       .map(w => w[0].toUpperCase())
       .join("");
+  }
+
+  function escapeAttr(str){
+    return String(str).replace(/"/g, "&quot;");
   }
 
   function renderPage(page){
@@ -392,12 +411,18 @@
       const cast = Array.isArray(v.cast) ? v.cast : (v.cast ? [v.cast] : []);
       const tags = Array.isArray(v.tags) ? v.tags : (v.tags ? [v.tags] : []);
       const url = v.url || "#";
+      const cover = v.cover || "";
+
+      const posterInner = cover
+        ? `<img src="${escapeAttr(cover)}" alt="${escapeAttr(title)}" loading="lazy"
+             onerror="this.closest('.poster').classList.remove('has-cover'); this.remove(); this.closest('.poster').insertAdjacentHTML('afterbegin','<span class=\\'initials\\'>${getInitials(title)}<\\/span>');">`
+        : `<span class="initials">${getInitials(title)}</span>`;
 
       const card = document.createElement("div");
       card.className = "card";
       card.innerHTML = `
-        <div class="poster">
-          <span class="initials">${getInitials(title)}</span>
+        <div class="poster${cover ? " has-cover" : ""}">
+          ${posterInner}
           <div class="play-hint"><span>&#9654;</span></div>
         </div>
         <div class="info">
