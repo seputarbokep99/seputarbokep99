@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>crotin.github.io</title>
+<title>SEPUTARBOKEP99</title>
 <style>
   :root{
     --radius: 14px;
@@ -223,29 +223,6 @@
     text-shadow: 0 4px 18px rgba(0,0,0,0.25);
   }
 
-  .play-hint{
-    position:absolute;
-    inset:0;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background: rgba(10,15,30,0.28);
-    opacity:0;
-    transition: opacity .25s ease;
-  }
-  .card:hover .play-hint{ opacity:1; }
-
-  .play-hint span{
-    width:52px; height:52px;
-    border-radius:50%;
-    background: rgba(255,255,255,0.16);
-    border: 1.5px solid #fff;
-    display:flex;align-items:center;justify-content:center;
-    color: #fff;
-    font-size: 18px;
-    backdrop-filter: blur(3px);
-  }
-
   .info{
     padding: 16px 16px 18px;
     display:flex;
@@ -271,6 +248,26 @@
   .meta-row b{
     color: var(--primary);
     font-weight: 600;
+  }
+
+  .cast-link{
+    color: var(--text);
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: var(--border);
+    text-underline-offset: 2px;
+    transition: color .15s ease, text-decoration-color .15s ease;
+  }
+
+  .cast-link:hover{
+    color: var(--primary);
+    text-decoration-color: var(--primary);
+  }
+
+  .cast-link.active-cast{
+    color: var(--primary);
+    text-decoration-color: var(--primary);
   }
 
   .tags{
@@ -399,8 +396,8 @@
 
 <header>
   <div class="brand">
-    <h1>KOLEKSI</h1>
-    <div class="tagline">crotin.github.io</div>
+    <h1>SEPUTARBOKEP99</h1>
+    <div class="tagline">Butuh video bokep berkualitas? disini tempatnya!</div>
   </div>
   <div class="controls">
     <button class="theme-toggle" id="themeToggle">
@@ -412,7 +409,7 @@
 
 <main>
   <div class="filter-bar hidden" id="filterBar">
-    <span class="filter-label">Menampilkan tag:</span>
+    <span class="filter-label" id="filterLabel">Menampilkan:</span>
     <span class="filter-chip">
       <span id="filterChipText"></span>
       <button id="filterClearBtn" title="Hapus filter">&times;</button>
@@ -442,35 +439,47 @@
   const PER_PAGE = 10;
   let allVideos = [];
   let currentPage = 1;
-  let activeTag = null;
+  // activeFilter = { type: "tag" | "cast", value: string } | null
+  let activeFilter = null;
 
   const grid = document.getElementById("grid");
   const pagination = document.getElementById("pagination");
   const filterBar = document.getElementById("filterBar");
+  const filterLabel = document.getElementById("filterLabel");
   const filterChipText = document.getElementById("filterChipText");
   const filterClearBtn = document.getElementById("filterClearBtn");
 
   function getVisibleVideos(){
-    if(!activeTag) return allVideos;
+    if(!activeFilter) return allVideos;
     return allVideos.filter(v => {
-      const tags = Array.isArray(v.tags) ? v.tags : (v.tags ? [v.tags] : []);
-      return tags.includes(activeTag);
+      if(activeFilter.type === "tag"){
+        const tags = Array.isArray(v.tags) ? v.tags : (v.tags ? [v.tags] : []);
+        return tags.includes(activeFilter.value);
+      } else {
+        const cast = Array.isArray(v.cast) ? v.cast : (v.cast ? [v.cast] : []);
+        return cast.includes(activeFilter.value);
+      }
     });
   }
 
-  function setTagFilter(tag){
-    activeTag = tag;
+  function setFilter(type, value){
+    if(activeFilter && activeFilter.type === type && activeFilter.value === value){
+      activeFilter = null;
+    } else {
+      activeFilter = value ? { type, value } : null;
+    }
     currentPage = 1;
-    if(activeTag){
+    if(activeFilter){
       filterBar.classList.remove("hidden");
-      filterChipText.textContent = activeTag;
+      filterLabel.textContent = activeFilter.type === "tag" ? "Menampilkan tag:" : "Menampilkan pemeran:";
+      filterChipText.textContent = activeFilter.value;
     } else {
       filterBar.classList.add("hidden");
     }
     renderPage(1);
   }
 
-  filterClearBtn.addEventListener("click", () => setTagFilter(null));
+  filterClearBtn.addEventListener("click", () => setFilter(null, null));
 
   function getInitials(title){
     return title
@@ -498,7 +507,8 @@
     const visibleVideos = getVisibleVideos();
 
     if(visibleVideos.length === 0){
-      grid.innerHTML = `<div class="empty-state">Tidak ada video dengan tag <b>${activeTag}</b>.</div>`;
+      const label = activeFilter.type === "tag" ? "tag" : "pemeran";
+      grid.innerHTML = `<div class="empty-state">Tidak ada video dengan ${label} <b>${activeFilter.value}</b>.</div>`;
       pagination.innerHTML = "";
       return;
     }
@@ -523,13 +533,12 @@
       card.innerHTML = `
         <div class="poster${cover ? " has-cover" : ""}">
           ${posterInner}
-          <div class="play-hint"><span>&#9654;</span></div>
         </div>
         <div class="info">
           <h3>${title}</h3>
-          <div class="meta-row"><b>Pemeran:</b> ${cast.length ? cast.join(", ") : "-"}</div>
+          <div class="meta-row"><b>Pemeran:</b> ${cast.length ? cast.map(c => `<span class="cast-link${activeFilter && activeFilter.type === "cast" && activeFilter.value === c ? " active-cast" : ""}" data-cast="${escapeAttr(c)}">${c}</span>`).join(", ") : "-"}</div>
           <div class="tags">
-            ${tags.map(t => `<span class="tag${t === activeTag ? " active-tag" : ""}" data-tag="${escapeAttr(t)}">${t}</span>`).join("")}
+            ${tags.map(t => `<span class="tag${activeFilter && activeFilter.type === "tag" && activeFilter.value === t ? " active-tag" : ""}" data-tag="${escapeAttr(t)}">${t}</span>`).join("")}
           </div>
           <a class="go-link" href="${url}" target="_blank" rel="noopener">Lihat Video</a>
         </div>
@@ -538,10 +547,11 @@
     });
 
     grid.querySelectorAll(".tag").forEach(el => {
-      el.addEventListener("click", () => {
-        const tag = el.getAttribute("data-tag");
-        setTagFilter(tag === activeTag ? null : tag);
-      });
+      el.addEventListener("click", () => setFilter("tag", el.getAttribute("data-tag")));
+    });
+
+    grid.querySelectorAll(".cast-link").forEach(el => {
+      el.addEventListener("click", () => setFilter("cast", el.getAttribute("data-cast")));
     });
 
     renderPagination();
