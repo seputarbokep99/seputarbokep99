@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KOLEKSI — Galeri Video</title>
+<title>crotin.github.io</title>
 <style>
   :root{
     --radius: 14px;
@@ -286,6 +286,65 @@
     background: var(--primary-soft);
     border: 1px solid var(--border);
     color: var(--primary);
+    cursor: pointer;
+    transition: background .2s ease, color .2s ease, transform .15s ease;
+  }
+
+  .tag:hover{
+    background: var(--primary);
+    color: #fff;
+    transform: translateY(-1px);
+  }
+
+  .tag.active-tag{
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+  }
+
+  .filter-bar{
+    display:flex;
+    align-items:center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+
+  .filter-bar.hidden{
+    display:none;
+  }
+
+  .filter-label{
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .filter-chip{
+    display:flex;
+    align-items:center;
+    gap: 8px;
+    background: var(--primary-soft);
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 8px 6px 14px;
+    border-radius: 999px;
+  }
+
+  .filter-chip button{
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: none;
+    background: var(--primary);
+    color: #fff;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
   }
 
   .go-link{
@@ -341,7 +400,7 @@
 <header>
   <div class="brand">
     <h1>KOLEKSI</h1>
-    <div class="tagline">Galeri Video</div>
+    <div class="tagline">crotin.github.io</div>
   </div>
   <div class="controls">
     <button class="theme-toggle" id="themeToggle">
@@ -352,6 +411,13 @@
 </header>
 
 <main>
+  <div class="filter-bar hidden" id="filterBar">
+    <span class="filter-label">Menampilkan tag:</span>
+    <span class="filter-chip">
+      <span id="filterChipText"></span>
+      <button id="filterClearBtn" title="Hapus filter">&times;</button>
+    </span>
+  </div>
   <div class="grid" id="grid"></div>
   <div class="pagination" id="pagination"></div>
 </main>
@@ -376,9 +442,35 @@
   const PER_PAGE = 10;
   let allVideos = [];
   let currentPage = 1;
+  let activeTag = null;
 
   const grid = document.getElementById("grid");
   const pagination = document.getElementById("pagination");
+  const filterBar = document.getElementById("filterBar");
+  const filterChipText = document.getElementById("filterChipText");
+  const filterClearBtn = document.getElementById("filterClearBtn");
+
+  function getVisibleVideos(){
+    if(!activeTag) return allVideos;
+    return allVideos.filter(v => {
+      const tags = Array.isArray(v.tags) ? v.tags : (v.tags ? [v.tags] : []);
+      return tags.includes(activeTag);
+    });
+  }
+
+  function setTagFilter(tag){
+    activeTag = tag;
+    currentPage = 1;
+    if(activeTag){
+      filterBar.classList.remove("hidden");
+      filterChipText.textContent = activeTag;
+    } else {
+      filterBar.classList.add("hidden");
+    }
+    renderPage(1);
+  }
+
+  filterClearBtn.addEventListener("click", () => setTagFilter(null));
 
   function getInitials(title){
     return title
@@ -403,8 +495,16 @@
       return;
     }
 
+    const visibleVideos = getVisibleVideos();
+
+    if(visibleVideos.length === 0){
+      grid.innerHTML = `<div class="empty-state">Tidak ada video dengan tag <b>${activeTag}</b>.</div>`;
+      pagination.innerHTML = "";
+      return;
+    }
+
     const start = (page - 1) * PER_PAGE;
-    const pageItems = allVideos.slice(start, start + PER_PAGE);
+    const pageItems = visibleVideos.slice(start, start + PER_PAGE);
 
     pageItems.forEach(v => {
       const title = v.title || "Tanpa Judul";
@@ -429,7 +529,7 @@
           <h3>${title}</h3>
           <div class="meta-row"><b>Pemeran:</b> ${cast.length ? cast.join(", ") : "-"}</div>
           <div class="tags">
-            ${tags.map(t => `<span class="tag">${t}</span>`).join("")}
+            ${tags.map(t => `<span class="tag${t === activeTag ? " active-tag" : ""}" data-tag="${escapeAttr(t)}">${t}</span>`).join("")}
           </div>
           <a class="go-link" href="${url}" target="_blank" rel="noopener">Lihat Video</a>
         </div>
@@ -437,11 +537,18 @@
       grid.appendChild(card);
     });
 
+    grid.querySelectorAll(".tag").forEach(el => {
+      el.addEventListener("click", () => {
+        const tag = el.getAttribute("data-tag");
+        setTagFilter(tag === activeTag ? null : tag);
+      });
+    });
+
     renderPagination();
   }
 
   function renderPagination(){
-    const totalPages = Math.ceil(allVideos.length / PER_PAGE);
+    const totalPages = Math.ceil(getVisibleVideos().length / PER_PAGE);
     pagination.innerHTML = "";
 
     if(totalPages <= 1) return;
